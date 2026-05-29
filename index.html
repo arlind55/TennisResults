@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tennis Set Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <style>
+    :root{--bg:#0f172a;--card:#111827;--muted:#94a3b8;--text:#e5e7eb;--accent:#38bdf8;--line:#1f2937;--good:#22c55e;--bad:#ef4444}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,Arial,sans-serif;background:linear-gradient(180deg,#0b1020,#111827);color:var(--text)}
+    .wrap{max-width:1200px;margin:0 auto;padding:24px}
+    h1{margin:0 0 8px;font-size:28px}
+    p{margin:0;color:var(--muted)}
+    .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:16px;margin-top:20px}
+    .card{background:rgba(17,24,39,.9);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    .row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+    label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+    input,select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:var(--text)}
+    button{padding:10px 14px;border:none;border-radius:10px;background:var(--accent);color:#00111a;font-weight:700;cursor:pointer}
+    button.secondary{background:#334155;color:var(--text)}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+    table{width:100%;border-collapse:collapse;margin-top:10px;font-size:14px}
+    th,td{padding:10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+    th{color:#cbd5e1;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+    .small{font-size:12px;color:var(--muted)}
+    .status{margin-top:10px;font-size:13px;color:var(--muted)}
+    .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}
+    .kpi{background:#0b1220;border:1px solid var(--line);border-radius:14px;padding:14px}
+    .kpi .v{font-size:24px;font-weight:800;margin-top:6px}
+    canvas{max-height:420px}
+    @media (max-width: 900px){.grid{grid-template-columns:1fr}.row{grid-template-columns:1fr 1fr}.kpis{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Tennis Set Dashboard</h1>
+    <p>Enter set scores manually or load them from Google Sheets CSV. The chart updates automatically.</p>
+
+    <div class="grid">
+      <div class="card">
+        <h2 style="margin-top:0">Data source</h2>
+        <div class="row">
+          <div style="grid-column: span 2;">
+            <label>CSV file in repo (relative path)</label>
+            <input id="csvPath" value="./data/results.csv" />
+          </div>
+          <div style="grid-column: span 2;">
+            <label>Google Sheets CSV URL</label>
+            <input id="sheetUrl" value="https://docs.google.com/spreadsheets/d/1h48QYG2GKmL8pTvsQAHhSYYKBBXXKuCnRt_BuwiOzk0/export?format=csv" />
+          </div>
+          <div style="grid-column: span 4;">
+            <label>Data source</label>
+            <div class="actions">
+              <button id="loadCsvBtn">Load from CSV file</button>
+              <button id="loadSheetBtn">Load from Google Sheets</button>
+            </div>
+          </div>
+          <div style="grid-column: span 2;">
+            <label>Reload interval</label>
+            <select id="interval">
+              <option value="0">Off</option>
+              <option value="30000">30 seconds</option>
+              <option value="60000" selected>1 minute</option>
+              <option value="300000">5 minutes</option>
+            </select>
+          </div>
+        </div>
+        <div class="status" id="status">Waiting for data...</div>
+
+        <div class="kpis">
+          <div class="kpi"><div class="small">Matches loaded</div><div class="v" id="kpiMatches">0</div></div>
+          <div class="kpi"><div class="small">Total games tracked</div><div class="v" id="kpiGames">0</div></div>
+          <div class="kpi"><div class="small">Average games per set</div><div class="v" id="kpiAvg">0</div></div>
+        </div>
+
+        <table id="resultsTable">
+          <thead>
+            <tr>
+              <th>Match</th>
+              <th>Set scores</th>
+              <th>Winner</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2 style="margin-top:0">Chart</h2>
+        <canvas id="chart"></canvas>
+      </div>
+    </div>
+  </div>
+
+<script>
+const sheetUrlEl = document.getElementById('sheetUrl');
+const statusEl = document.getElementById('status');
+const tbody = document.querySelector('#resultsTable tbody');
+const kpiMatches = document.getElementById('kpiMatches');
+const kpiGames = document.getElementById('kpiGames');
+const kpiAvg = document.getElementById('kpiAvg');
+let chart, timer = null;
+
+
+
+function parseSet(set){
+  const m = (set || '').match(/(\d+)\s*[-:]\s*(\d+)/);
+  if (!m) return null;
+  return {a:+m[1], b:+m[2]};
+}
+
+function sumGames(sets){
+  return sets.reduce((acc,s)=>{
+    const p = parseSet(s);
+    return p ? acc + p.a + p.b : acc;
+  },0);
+}
+
+function winnerFromSets(sets){
+  let a=0,b=0;
+  sets.forEach(s=>{const p=parseSet(s); if(p){ if(p.a>p.b) a++; else if(p.b>p.a) b++; }});
+  if (a===b) return 'TBD';
+  return a>b ? 'Player 1' : 'Player 2';
+}
+
+function buildChart(labels, data){
+  const ctx = document.getElementById('chart');
+  if (chart) chart.destroy();
+  chart = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'Total games per match', data, backgroundColor: '#38bdf8' }] },
+    options: {
+      responsive: true,
+      plugins: { legend: { labels: { color: '#e5e7eb' } } },
+      scales: {
+        x: { ticks: { color: '#cbd5e1' }, grid: { color: '#1f2937' } },
+        y: { ticks: { color: '#cbd5e1' }, grid: { color: '#1f2937' }, beginAtZero: true }
+      }
+    }
+  });
+}
+
+function render(matches){
+  const rows = matches.filter(Boolean);
+  tbody.innerHTML = rows.map(m => {
+    const games = sumGames(m.sets);
+    return `<tr><td>${m.match}</td><td>${m.sets.join(', ')}</td><td>${winnerFromSets(m.sets)} <span class="small">(${games} games)</span></td></tr>`;
+  }).join('');
+
+  const labels = rows.map(m => m.match);
+  const data = rows.map(m => sumGames(m.sets));
+  const totalGames = data.reduce((a,b)=>a+b,0);
+  const avg = rows.length ? (totalGames / rows.length).toFixed(1) : '0';
+  kpiMatches.textContent = rows.length;
+  kpiGames.textContent = totalGames;
+  kpiAvg.textContent = avg;
+  buildChart(labels, data);
+}
+
+
+async function loadFromCsv(){
+  const path = document.getElementById('csvPath').value.trim();
+  statusEl.textContent = `Loading from CSV: ${path}...`;
+  try{
+    const res = await fetch(path, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text = await res.text();
+    const parsed = Papa.parse(text, { header: false, skipEmptyLines: true });
+    const rows = parsed.data.filter(r => Array.isArray(r) && r.length);
+    const matches = rows.slice(1).map(r => ({match: (r[0] ?? '').toString().trim(), sets: r.slice(1,6).map(x => (x ?? '').toString().trim()).filter(Boolean)})).filter(m => m.match);
+    if (!matches.length) throw new Error('No match rows found');
+    render(matches);
+    statusEl.textContent = `Loaded ${matches.length} rows from CSV file.`;
+  }catch(err){
+    statusEl.textContent = `Could not load CSV from: ${path} (${err.message})`;
+    const sample = [
+      {match:'1', sets:['6-4','3-6','7-5','4-6','7-5']},
+      {match:'2', sets:['6-4','3-6','7-5','4-6','7-5']}
+    ];
+    render(sample);
+  }
+}
+
+  async function loadFromSheet(){
+  const url = sheetUrlEl.value.trim();
+  statusEl.textContent = 'Loading data...';
+  try{
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text = await res.text();
+    const parsed = Papa.parse(text, { header: false, skipEmptyLines: true });
+    const rows = parsed.data.filter(r => Array.isArray(r) && r.length);
+    const matches = rows.slice(1).map(r => ({match: (r[0] ?? '').toString().trim(), sets: r.slice(1,6).map(x => (x ?? '').toString().trim()).filter(Boolean)})).filter(m => m.match);
+    if (!matches.length) throw new Error('No match rows found');
+    render(matches);
+    statusEl.textContent = `Loaded ${matches.length} rows from Google Sheets.`;
+  }catch(err){
+    statusEl.textContent = `Could not load the sheet from: ${url} (${err.message})`;
+    const sample = [
+      {match:'1', sets:['6-4','3-6','7-5','4-6','7-5']},
+      {match:'2', sets:['6-4','3-6','7-5','4-6','7-5']}
+    ];
+    render(sample);
+  }
+}
+
+function setupAutoReload(){
+  if (timer) clearInterval(timer);
+  const ms = +document.getElementById('interval').value;
+  if (ms > 0) timer = setInterval(loadFromSheet, ms);
+}
+
+document.getElementById('loadCsvBtn').addEventListener('click', async () => { await loadFromCsv(); setupAutoReload(); });
+document.getElementById('loadSheetBtn').addEventListener('click', async () => { await loadFromSheet(); setupAutoReload(); });
+document.getElementById('interval').addEventListener('change', setupAutoReload);
+loadFromSheet();
+setupAutoReload();
+</script>
+</body>
+</html>
