@@ -4,219 +4,524 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tennis Set Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <style>
-    :root{--bg:#0f172a;--card:#111827;--muted:#94a3b8;--text:#e5e7eb;--accent:#38bdf8;--line:#1f2937;--good:#22c55e;--bad:#ef4444}
-    *{box-sizing:border-box}
-    body{margin:0;font-family:Inter,system-ui,Arial,sans-serif;background:linear-gradient(180deg,#0b1020,#111827);color:var(--text)}
-    .wrap{max-width:1200px;margin:0 auto;padding:24px}
-    h1{margin:0 0 8px;font-size:28px}
-    p{margin:0;color:var(--muted)}
-    .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:16px;margin-top:20px}
-    .card{background:rgba(17,24,39,.9);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
-    .row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-    label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
-    input,select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:var(--text)}
-    button{padding:10px 14px;border:none;border-radius:10px;background:var(--accent);color:#00111a;font-weight:700;cursor:pointer}
-    button.secondary{background:#334155;color:var(--text)}
-    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
-    table{width:100%;border-collapse:collapse;margin-top:10px;font-size:14px}
-    th,td{padding:10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
-    th{color:#cbd5e1;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
-    .small{font-size:12px;color:var(--muted)}
-    .status{margin-top:10px;font-size:13px;color:var(--muted)}
-    .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}
-    .kpi{background:#0b1220;border:1px solid var(--line);border-radius:14px;padding:14px}
-    .kpi .v{font-size:24px;font-weight:800;margin-top:6px}
-    canvas{max-height:420px}
-    @media (max-width: 900px){.grid{grid-template-columns:1fr}.row{grid-template-columns:1fr 1fr}.kpis{grid-template-columns:1fr}}
+    :root {
+      --bg: #0b1220;
+      --surface: #111827;
+      --surface-2: #0f172a;
+      --border: rgba(148, 163, 184, 0.18);
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --accent-a: #38bdf8;
+      --accent-b: #22c55e;
+      --accent-c: #f59e0b;
+      --danger: #ef4444;
+      --shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Inter', system-ui, Arial, sans-serif;
+      background: radial-gradient(circle at top left, #12203d, var(--bg) 40%);
+      color: var(--text);
+    }
+    .wrap {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 16px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    h1 {
+      margin: 0;
+      font-size: 30px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+    .subtitle {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 15px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.85);
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 18px;
+    }
+    .stack {
+      display: grid;
+      gap: 18px;
+    }
+    .card {
+      background: linear-gradient(180deg, rgba(17,24,39,0.95), rgba(15,23,42,0.98));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+    .card h2 {
+      margin: 0 0 14px;
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .small {
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    input, select {
+      width: 100%;
+      padding: 11px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #0b1220;
+      color: var(--text);
+    }
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 11px 15px;
+      font-weight: 700;
+      cursor: pointer;
+      background: var(--accent-a);
+      color: #001018;
+    }
+    button.secondary {
+      background: #1e293b;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .status {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .summary-table, .results-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .summary-table th, .summary-table td,
+    .results-table th, .results-table td {
+      text-align: left;
+      padding: 12px 10px;
+      border-bottom: 1px solid rgba(148,163,184,0.14);
+      font-variant-numeric: tabular-nums lining-nums;
+    }
+    .summary-table th, .results-table th {
+      color: #cbd5e1;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .player-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+    }
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      display: inline-block;
+    }
+    .dot-a { background: var(--accent-a); }
+    .dot-b { background: var(--accent-b); }
+    .results-wrap {
+      max-height: 360px;
+      overflow: auto;
+    }
+    .winner-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      background: rgba(56, 189, 248, 0.14);
+      color: #dbeafe;
+      border: 1px solid rgba(56, 189, 248, 0.22);
+    }
+    .winner-pill.david {
+      background: rgba(34, 197, 94, 0.14);
+      border-color: rgba(34, 197, 94, 0.22);
+    }
+    .winner-pill.tbd {
+      background: rgba(245, 158, 11, 0.14);
+      border-color: rgba(245, 158, 11, 0.22);
+    }
+    canvas { max-height: 420px; }
+    @media (max-width: 920px) {
+      .layout { grid-template-columns: 1fr; }
+      .row { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 620px) {
+      .row { grid-template-columns: 1fr; }
+      .wrap { padding: 16px; }
+      .card { padding: 16px; }
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <h1>Tennis Set Dashboard</h1>
-    <p>Enter set scores manually or load them from Google Sheets CSV. The chart updates automatically.</p>
+    <div class="topbar">
+      <div>
+        <h1>Arlind vs David Dashboard</h1>
+        <div class="subtitle">Track match wins, set wins, and total games won from CSV or Google Sheets.</div>
+      </div>
+      <div class="badge">Head-to-head tracker</div>
+    </div>
 
-    <div class="grid">
-      <div class="card">
-        <h2 style="margin-top:0">Data source</h2>
-        <div class="row">
-          <div style="grid-column: span 2;">
-            <label>CSV file in repo (relative path)</label>
-            <input id="csvPath" value="./data/results.csv" />
-          </div>
-          <div style="grid-column: span 2;">
-            <label>Google Sheets CSV URL</label>
-            <input id="sheetUrl" value="https://docs.google.com/spreadsheets/d/1h48QYG2GKmL8pTvsQAHhSYYKBBXXKuCnRt_BuwiOzk0/export?format=csv" />
-          </div>
-          <div style="grid-column: span 4;">
-            <label>Data source</label>
-            <div class="actions">
-              <button id="loadCsvBtn">Load from CSV file</button>
-              <button id="loadSheetBtn">Load from Google Sheets</button>
+    <div class="layout">
+      <div class="stack">
+        <div class="card">
+          <h2>Data source</h2>
+          <div class="row">
+            <div style="grid-column: span 2;">
+              <label>CSV file in repo</label>
+              <input id="csvPath" value="./data/results.csv" />
+            </div>
+            <div style="grid-column: span 2;">
+              <label>Google Sheets CSV URL</label>
+              <input id="sheetUrl" value="https://docs.google.com/spreadsheets/d/1h48QYG2GKmL8pTvsQAHhSYYKBBXXKuCnRt_BuwiOzk0/export?format=csv" />
+            </div>
+            <div style="grid-column: span 3;">
+              <label>Load data</label>
+              <div class="actions">
+                <button id="loadCsvBtn">Load from CSV</button>
+                <button id="loadSheetBtn" class="secondary">Load from Google Sheets</button>
+              </div>
+            </div>
+            <div style="grid-column: span 1;">
+              <label>Reload interval</label>
+              <select id="interval">
+                <option value="0">Off</option>
+                <option value="30000">30 sec</option>
+                <option value="60000" selected>1 min</option>
+                <option value="300000">5 min</option>
+              </select>
             </div>
           </div>
-          <div style="grid-column: span 2;">
-            <label>Reload interval</label>
-            <select id="interval">
-              <option value="0">Off</option>
-              <option value="30000">30 seconds</option>
-              <option value="60000" selected>1 minute</option>
-              <option value="300000">5 minutes</option>
-            </select>
+          <div class="status" id="status">Waiting for data...</div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h2>Arlind vs David</h2>
+            <span class="small">Head-to-head totals</span>
+          </div>
+          <table class="summary-table">
+            <thead>
+              <tr>
+                <th>Player</th>
+                <th>Matches won</th>
+                <th>Sets won</th>
+                <th>Total games won</th>
+              </tr>
+            </thead>
+            <tbody id="summaryBody"></tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h2>Match results</h2>
+            <span class="small">Per-match set breakdown</span>
+          </div>
+          <div class="results-wrap">
+            <table class="results-table">
+              <thead>
+                <tr>
+                  <th>Match</th>
+                  <th>Set scores</th>
+                  <th>Winner</th>
+                </tr>
+              </thead>
+              <tbody id="resultsBody"></tbody>
+            </table>
           </div>
         </div>
-        <div class="status" id="status">Waiting for data...</div>
-
-        <div class="kpis">
-          <div class="kpi"><div class="small">Matches loaded</div><div class="v" id="kpiMatches">0</div></div>
-          <div class="kpi"><div class="small">Total games tracked</div><div class="v" id="kpiGames">0</div></div>
-          <div class="kpi"><div class="small">Average games per set</div><div class="v" id="kpiAvg">0</div></div>
-        </div>
-
-        <table id="resultsTable">
-          <thead>
-            <tr>
-              <th>Match</th>
-              <th>Set scores</th>
-              <th>Winner</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
       </div>
 
-      <div class="card">
-        <h2 style="margin-top:0">Chart</h2>
-        <canvas id="chart"></canvas>
+      <div class="stack">
+        <div class="card">
+          <div class="card-head">
+            <h2>Matches won</h2>
+            <span class="small">Bar chart</span>
+          </div>
+          <canvas id="winsChart"></canvas>
+        </div>
       </div>
     </div>
   </div>
 
-<script>
-const sheetUrlEl = document.getElementById('sheetUrl');
-const statusEl = document.getElementById('status');
-const tbody = document.querySelector('#resultsTable tbody');
-const kpiMatches = document.getElementById('kpiMatches');
-const kpiGames = document.getElementById('kpiGames');
-const kpiAvg = document.getElementById('kpiAvg');
-let chart, timer = null;
+  <script>
+    const PLAYER_1 = 'Arlind';
+    const PLAYER_2 = 'David';
 
+    const sheetUrlEl = document.getElementById('sheetUrl');
+    const statusEl = document.getElementById('status');
+    const summaryBody = document.getElementById('summaryBody');
+    const resultsBody = document.getElementById('resultsBody');
+    let winsChart = null;
+    let timer = null;
+    let currentLoader = 'csv';
 
+    function parseSet(set) {
+      const m = (set || '').match(/(\d+)\s*[-:]\s*(\d+)/);
+      if (!m) return null;
+      return { a: +m[1], b: +m[2] };
+    }
 
-function parseSet(set){
-  const m = (set || '').match(/(\d+)\s*[-:]\s*(\d+)/);
-  if (!m) return null;
-  return {a:+m[1], b:+m[2]};
-}
+    function parseMatchesFromText(text) {
+      const parsed = Papa.parse(text, { header: false, skipEmptyLines: true });
+      const rows = parsed.data.filter(r => Array.isArray(r) && r.some(cell => String(cell ?? '').trim() !== ''));
+      const matches = rows.slice(1)
+        .map(r => ({
+          match: (r[0] ?? '').toString().trim(),
+          sets: r.slice(1, 6).map(x => (x ?? '').toString().trim()).filter(Boolean)
+        }))
+        .filter(m => m.match);
+      if (!matches.length) throw new Error('No match rows found');
+      return matches;
+    }
 
-function sumGames(sets){
-  return sets.reduce((acc,s)=>{
-    const p = parseSet(s);
-    return p ? acc + p.a + p.b : acc;
-  },0);
-}
+    function analyseMatch(match) {
+      let player1Sets = 0;
+      let player2Sets = 0;
+      let player1Games = 0;
+      let player2Games = 0;
 
-function winnerFromSets(sets){
-  let a=0,b=0;
-  sets.forEach(s=>{const p=parseSet(s); if(p){ if(p.a>p.b) a++; else if(p.b>p.a) b++; }});
-  if (a===b) return 'TBD';
-  return a>b ? 'Player 1' : 'Player 2';
-}
+      match.sets.forEach(set => {
+        const parsed = parseSet(set);
+        if (!parsed) return;
+        player1Games += parsed.a;
+        player2Games += parsed.b;
+        if (parsed.a > parsed.b) player1Sets += 1;
+        if (parsed.b > parsed.a) player2Sets += 1;
+      });
 
-function buildChart(labels, data){
-  const ctx = document.getElementById('chart');
-  if (chart) chart.destroy();
-  chart = new Chart(ctx, {
-    type: 'bar',
-    data: { labels, datasets: [{ label: 'Total games per match', data, backgroundColor: '#38bdf8' }] },
-    options: {
-      responsive: true,
-      plugins: { legend: { labels: { color: '#e5e7eb' } } },
-      scales: {
-        x: { ticks: { color: '#cbd5e1' }, grid: { color: '#1f2937' } },
-        y: { ticks: { color: '#cbd5e1' }, grid: { color: '#1f2937' }, beginAtZero: true }
+      let winner = 'TBD';
+      if (player1Sets > player2Sets) winner = PLAYER_1;
+      if (player2Sets > player1Sets) winner = PLAYER_2;
+
+      return {
+        match: match.match,
+        sets: match.sets,
+        player1Sets,
+        player2Sets,
+        player1Games,
+        player2Games,
+        winner
+      };
+    }
+
+    function buildSummary(analysedMatches) {
+      const summary = {
+        [PLAYER_1]: { matchesWon: 0, setsWon: 0, gamesWon: 0 },
+        [PLAYER_2]: { matchesWon: 0, setsWon: 0, gamesWon: 0 }
+      };
+
+      analysedMatches.forEach(match => {
+        summary[PLAYER_1].setsWon += match.player1Sets;
+        summary[PLAYER_2].setsWon += match.player2Sets;
+        summary[PLAYER_1].gamesWon += match.player1Games;
+        summary[PLAYER_2].gamesWon += match.player2Games;
+        if (match.winner === PLAYER_1) summary[PLAYER_1].matchesWon += 1;
+        if (match.winner === PLAYER_2) summary[PLAYER_2].matchesWon += 1;
+      });
+
+      return summary;
+    }
+
+    function winnerPill(winner) {
+      if (winner === PLAYER_1) return `<span class="winner-pill"><span class="dot dot-a"></span>${winner}</span>`;
+      if (winner === PLAYER_2) return `<span class="winner-pill david"><span class="dot dot-b"></span>${winner}</span>`;
+      return `<span class="winner-pill tbd"><span class="dot" style="background: var(--accent-c)"></span>${winner}</span>`;
+    }
+
+    function renderTables(analysedMatches, summary) {
+      summaryBody.innerHTML = `
+        <tr>
+          <td><span class="player-chip"><span class="dot dot-a"></span>${PLAYER_1}</span></td>
+          <td>${summary[PLAYER_1].matchesWon}</td>
+          <td>${summary[PLAYER_1].setsWon}</td>
+          <td>${summary[PLAYER_1].gamesWon}</td>
+        </tr>
+        <tr>
+          <td><span class="player-chip"><span class="dot dot-b"></span>${PLAYER_2}</span></td>
+          <td>${summary[PLAYER_2].matchesWon}</td>
+          <td>${summary[PLAYER_2].setsWon}</td>
+          <td>${summary[PLAYER_2].gamesWon}</td>
+        </tr>
+      `;
+
+      resultsBody.innerHTML = analysedMatches.map(match => `
+        <tr>
+          <td>${match.match}</td>
+          <td>${match.sets.join(', ')}</td>
+          <td>${winnerPill(match.winner)}</td>
+        </tr>
+      `).join('');
+    }
+
+    function renderChart(summary) {
+      const ctx = document.getElementById('winsChart');
+      if (winsChart) winsChart.destroy();
+      winsChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: [PLAYER_1, PLAYER_2],
+          datasets: [{
+            label: 'Matches won',
+            data: [summary[PLAYER_1].matchesWon, summary[PLAYER_2].matchesWon],
+            backgroundColor: ['#38bdf8', '#22c55e'],
+            borderRadius: 12,
+            borderSkipped: false,
+            maxBarThickness: 72
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#0f172a',
+              borderColor: 'rgba(148,163,184,0.18)',
+              borderWidth: 1,
+              titleColor: '#e5e7eb',
+              bodyColor: '#e5e7eb'
+            }
+          },
+          scales: {
+            x: {
+              ticks: { color: '#cbd5e1', font: { weight: '700' } },
+              grid: { display: false }
+            },
+            y: {
+              beginAtZero: true,
+              ticks: { precision: 0, color: '#cbd5e1' },
+              grid: { color: 'rgba(148,163,184,0.12)' }
+            }
+          }
+        }
+      });
+    }
+
+    function renderDashboard(matches) {
+      const analysedMatches = matches.map(analyseMatch);
+      const summary = buildSummary(analysedMatches);
+      renderTables(analysedMatches, summary);
+      renderChart(summary);
+    }
+
+    async function loadText(urlOrPath) {
+      const res = await fetch(urlOrPath, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.text();
+    }
+
+    async function loadFromCsv() {
+      currentLoader = 'csv';
+      const path = document.getElementById('csvPath').value.trim();
+      statusEl.textContent = `Loading from CSV: ${path}...`;
+      try {
+        const text = await loadText(path);
+        const matches = parseMatchesFromText(text);
+        renderDashboard(matches);
+        statusEl.textContent = `Loaded ${matches.length} matches from CSV file.`;
+      } catch (err) {
+        statusEl.textContent = `Could not load CSV from: ${path} (${err.message})`;
       }
     }
-  });
-}
 
-function render(matches){
-  const rows = matches.filter(Boolean);
-  tbody.innerHTML = rows.map(m => {
-    const games = sumGames(m.sets);
-    return `<tr><td>${m.match}</td><td>${m.sets.join(', ')}</td><td>${winnerFromSets(m.sets)} <span class="small">(${games} games)</span></td></tr>`;
-  }).join('');
+    async function loadFromSheet() {
+      currentLoader = 'sheet';
+      const url = sheetUrlEl.value.trim();
+      statusEl.textContent = `Loading from Google Sheets...`;
+      try {
+        const text = await loadText(url);
+        const matches = parseMatchesFromText(text);
+        renderDashboard(matches);
+        statusEl.textContent = `Loaded ${matches.length} matches from Google Sheets.`;
+      } catch (err) {
+        statusEl.textContent = `Could not load the sheet from: ${url} (${err.message})`;
+      }
+    }
 
-  const labels = rows.map(m => m.match);
-  const data = rows.map(m => sumGames(m.sets));
-  const totalGames = data.reduce((a,b)=>a+b,0);
-  const avg = rows.length ? (totalGames / rows.length).toFixed(1) : '0';
-  kpiMatches.textContent = rows.length;
-  kpiGames.textContent = totalGames;
-  kpiAvg.textContent = avg;
-  buildChart(labels, data);
-}
+    function setupAutoReload() {
+      if (timer) clearInterval(timer);
+      const ms = +document.getElementById('interval').value;
+      if (ms > 0) {
+        timer = setInterval(() => {
+          if (currentLoader === 'sheet') loadFromSheet();
+          else loadFromCsv();
+        }, ms);
+      }
+    }
 
+    document.getElementById('loadCsvBtn').addEventListener('click', async () => {
+      await loadFromCsv();
+      setupAutoReload();
+    });
 
-async function loadFromCsv(){
-  const path = document.getElementById('csvPath').value.trim();
-  statusEl.textContent = `Loading from CSV: ${path}...`;
-  try{
-    const res = await fetch(path, { cache: 'no-store' });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const text = await res.text();
-    const parsed = Papa.parse(text, { header: false, skipEmptyLines: true });
-    const rows = parsed.data.filter(r => Array.isArray(r) && r.length);
-    const matches = rows.slice(1).map(r => ({match: (r[0] ?? '').toString().trim(), sets: r.slice(1,6).map(x => (x ?? '').toString().trim()).filter(Boolean)})).filter(m => m.match);
-    if (!matches.length) throw new Error('No match rows found');
-    render(matches);
-    statusEl.textContent = `Loaded ${matches.length} rows from CSV file.`;
-  }catch(err){
-    statusEl.textContent = `Could not load CSV from: ${path} (${err.message})`;
-    const sample = [
-      {match:'1', sets:['6-4','3-6','7-5','4-6','7-5']},
-      {match:'2', sets:['6-4','3-6','7-5','4-6','7-5']}
-    ];
-    render(sample);
-  }
-}
+    document.getElementById('loadSheetBtn').addEventListener('click', async () => {
+      await loadFromSheet();
+      setupAutoReload();
+    });
 
-  async function loadFromSheet(){
-  const url = sheetUrlEl.value.trim();
-  statusEl.textContent = 'Loading data...';
-  try{
-    const res = await fetch(url, { cache: 'no-store' });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const text = await res.text();
-    const parsed = Papa.parse(text, { header: false, skipEmptyLines: true });
-    const rows = parsed.data.filter(r => Array.isArray(r) && r.length);
-    const matches = rows.slice(1).map(r => ({match: (r[0] ?? '').toString().trim(), sets: r.slice(1,6).map(x => (x ?? '').toString().trim()).filter(Boolean)})).filter(m => m.match);
-    if (!matches.length) throw new Error('No match rows found');
-    render(matches);
-    statusEl.textContent = `Loaded ${matches.length} rows from Google Sheets.`;
-  }catch(err){
-    statusEl.textContent = `Could not load the sheet from: ${url} (${err.message})`;
-    const sample = [
-      {match:'1', sets:['6-4','3-6','7-5','4-6','7-5']},
-      {match:'2', sets:['6-4','3-6','7-5','4-6','7-5']}
-    ];
-    render(sample);
-  }
-}
+    document.getElementById('interval').addEventListener('change', setupAutoReload);
 
-function setupAutoReload(){
-  if (timer) clearInterval(timer);
-  const ms = +document.getElementById('interval').value;
-  if (ms > 0) timer = setInterval(loadFromSheet, ms);
-}
-
-document.getElementById('loadCsvBtn').addEventListener('click', async () => { await loadFromCsv(); setupAutoReload(); });
-document.getElementById('loadSheetBtn').addEventListener('click', async () => { await loadFromSheet(); setupAutoReload(); });
-document.getElementById('interval').addEventListener('change', setupAutoReload);
-loadFromSheet();
-setupAutoReload();
-</script>
+    loadFromCsv();
+    setupAutoReload();
+  </script>
 </body>
 </html>
